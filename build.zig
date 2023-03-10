@@ -17,6 +17,7 @@ const mods: []const build.Module = &.{.{
 const basic_target_spec: build.TargetSpec = .{
     .mods = mods,
     .deps = deps,
+    .mode = .ReleaseSmall,
 };
 
 // zl looks for `buildMain` instead of `build` or `main`, because `main` is
@@ -24,7 +25,7 @@ const basic_target_spec: build.TargetSpec = .{
 // target (as below), and `build` is the name of import containing build system
 // components.
 pub fn buildMain(allocator: *build.Allocator, builder: *build.Builder) !void {
-    const main: *build.Target = builder.addTarget(basic_target_spec, allocator, "main", "./src/main.zig");
+    const main: *build.Target = builder.addTarget(basic_target_spec, allocator, "treez", "./src/main.zig");
 
     main.addFormat(allocator, .{});
 }

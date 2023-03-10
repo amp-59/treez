@@ -67,6 +67,9 @@ const use_wide_arrows: bool = false;
 const always_try_empty_dir_correction: bool = false;
 const max_pathname_args: u16 = 128;
 //
+comptime {
+    if (builtin.zig.mode == .Debug and print_in_second_thread) @compileError("unstable configuration");
+}
 const opts_map: []const Options.Map = meta.slice(proc.GenericOptions(Options), .{ // zig fmt: off
     .{ .field_name = "hide",       .long = "--hide",                        .assign = Options.yes, .descr = about_hide_s },
     .{ .field_name = "follow",     .short = "-L", .long = "--follow",       .assign = Options.yes, .descr = about_follow_s },
