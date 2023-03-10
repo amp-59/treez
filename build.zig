@@ -25,7 +25,5 @@ const basic_target_spec: build.TargetSpec = .{
 // target (as below), and `build` is the name of import containing build system
 // components.
 pub fn buildMain(allocator: *build.Allocator, builder: *build.Builder) !void {
-    const main: *build.Target = builder.addTarget(basic_target_spec, allocator, "treez", "./src/main.zig");
-
-    main.addFormat(allocator, .{});
+    _ = builder.addTarget(basic_target_spec, allocator, "treez", "./src/main.zig");
 }
