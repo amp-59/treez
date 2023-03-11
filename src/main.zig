@@ -57,25 +57,21 @@ const print_in_second_thread: bool = true;
 const use_wide_arrows: bool = false;
 const always_try_empty_dir_correction: bool = false;
 const max_pathname_args: u16 = 128;
-//
 const Options = packed struct {
     hide: bool = hide_default,
     follow: bool = follow_default,
     colour: bool = colour_default,
     results: bool = results_default,
     max_depth: u12 = max_depth_default,
-
     const hide_default: bool = false;
     const follow_default: bool = true;
     const colour_default: bool = true;
     const results_default: bool = true;
     const max_depth_default: u16 = 4095;
-
-    pub const Map = proc.GenericOptions(Options);
     const yes = .{ .boolean = true };
     const no = .{ .boolean = false };
     const int = .{ .convert = convertToInt };
-
+    pub const Map = proc.GenericOptions(Options);
     fn convertToInt(options: *Options, arg: []const u8) void {
         options.max_depth = builtin.parse.ud(u8, arg);
     }
