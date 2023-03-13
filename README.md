@@ -37,6 +37,7 @@ Plain mode: `print_plain = true`
 
 
 ## Build
+
 ```sh
 git clone --recursive "https://github.com/amp-59/treez" "treez";
 cd "treez";
@@ -45,7 +46,13 @@ zig build treez;
 sh "zig_lib/support/switch_build_runner.sh";
 ```
 
-## Notes
+## Switching build runner
+
+```sh
+sh "zig_lib/support/switch_build_runner.sh";
+```
+
+![alt text](images/zl_std_std_zl.png?raw=true)
 
 Running the script `switch_build_runner.sh` will move the existing standard
 library build runner to a backup location in the Zig install directory and
