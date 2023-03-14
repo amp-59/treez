@@ -39,11 +39,11 @@ Plain mode: `print_plain = true`
 ## Build
 
 ```sh
-git clone --recursive "https://github.com/amp-59/treez" "treez";
-cd "treez";
-"zig_lib/support/switch_build_runner.sh";
+git clone --recursive "https://github.com/amp-59/treez" treez;
+cd treez;
+./zig_lib/support/switch_build_runner.sh;
 zig build treez;
-"zig_lib/support/switch_build_runner.sh";
+./zig_lib/support/switch_build_runner.sh;
 ```
 
 ## Switching build runner
