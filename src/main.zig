@@ -3,6 +3,7 @@ const lit = srg.lit;
 const sys = srg.sys;
 const fmt = srg.fmt;
 const mem = srg.mem;
+const mach = srg.mach;
 const file = srg.file;
 const meta = srg.meta;
 const proc = srg.proc;
@@ -437,8 +438,7 @@ pub fn main(args: [][*:0]u8) !void {
                 show(results);
             }
         } else {
-            alts_buf.writeMany(" " ** 4096);
-            alts_buf.undefine(4096);
+            mach.memset(alts_buf.referManyAt(0).ptr, ' ', 4096);
             if (print_in_second_thread) {
                 var tid: u64 = undefined;
                 var done: bool = false;
