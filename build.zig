@@ -6,7 +6,11 @@
 // a module and can import itself from anywhere.
 pub const zig_lib = @import("zig_lib/zig_lib.zig");
 
-const build = zig_lib.build;
+const spec = zig_lib.spec;
+const build = zig_lib.build2;
+const builtin = zig_lib.builtin;
+
+pub const Builder: type = build.GenericBuilder(spec.builder.default);
 
 // zl dependencies and modules:
 const deps: []const build.ModuleDependency = &.{
