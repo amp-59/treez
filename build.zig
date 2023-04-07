@@ -32,6 +32,12 @@ const init = .{
 // actually in build_runner.zig and might be useful for the name of one of the
 // target (as below), and `build` is the name of import containing build system
 // components.
-pub fn buildMain(allocator: *build.Allocator, builder: *build.Builder) !void {
-    _ = builder.addTarget(basic_target_spec, allocator, "treez", "./src/main.zig");
+pub fn buildMain(allocator: *Builder.Allocator, builder: *Builder) !void {
+    const all: *Builder.Group = try builder.addGroup(allocator, "all");
+
+    const treez: *Builder.Target = try all.addTarget(allocator, init, "treez", "./src/main.zig");
+    const zl_treez: *Builder.Target = try all.addTarget(allocator, init, "zl_treez", "./zig_lib/examples/treez.zig");
+
+    treez.descr = "List contents of directories in a tree-like format";
+    zl_treez.descr = "List contents of directories in a tree-like format, but faster";
 }
