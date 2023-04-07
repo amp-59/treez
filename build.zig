@@ -13,17 +13,19 @@ const builtin = zig_lib.builtin;
 pub const Builder: type = build.GenericBuilder(spec.builder.default);
 
 // zl dependencies and modules:
-const deps: []const build.ModuleDependency = &.{
-    .{ .name = "zig_lib" },
-};
+const deps: []const build.ModuleDependency = &.{.{ .name = "zig_lib" }};
 const mods: []const build.Module = &.{.{
     .name = "zig_lib",
     .path = "zig_lib/zig_lib.zig",
 }};
-const basic_target_spec: build.TargetSpec = .{
-    .mods = mods,
-    .deps = deps,
+
+const init = .{
+    .modules = mods,
+    .dependencies = deps,
     .mode = .ReleaseSmall,
+    .strip = true,
+    .enable_cache = true,
+    .compiler_rt = false,
 };
 
 // zl looks for `buildMain` instead of `build` or `main`, because `main` is
