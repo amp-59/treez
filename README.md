@@ -41,15 +41,13 @@ Plain mode: `print_plain = true`
 ```sh
 git clone --recursive "https://github.com/amp-59/treez" treez;
 cd treez;
-./zig_lib/support/switch_build_runner.sh;
-zig build treez;
-./zig_lib/support/switch_build_runner.sh;
+zig build --build-runner zig_lib/build_runner.zig treez;
 ```
 
-## Switching build runner
+## Toggling build runner
 
 ```sh
-sh "zig_lib/support/switch_build_runner.sh";
+./zig_lib/support/switch_build_runner.sh;
 ```
 
 ![alt text](images/zl_std_std_zl.png?raw=true)
