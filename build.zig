@@ -24,7 +24,6 @@ const init = .{
     .dependencies = deps,
     .mode = .ReleaseSmall,
     .strip = true,
-    .enable_cache = true,
     .compiler_rt = false,
 };
 
@@ -40,4 +39,5 @@ pub fn buildMain(allocator: *Builder.Allocator, builder: *Builder) !void {
 
     treez.descr = "List contents of directories in a tree-like format";
     zl_treez.descr = "List contents of directories in a tree-like format, but faster";
+    zl_treez.build_cmd.name = "treez";
 }

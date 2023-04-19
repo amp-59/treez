@@ -178,6 +178,7 @@ fn colour(kind: file.Kind) [:0]const u8 {
         .character_special => return character_special_style,
         .named_pipe => return named_pipe_style,
         .socket => return socket_style,
+        .unknown => unreachable,
     }
 }
 fn show(results: Results) void {
@@ -289,7 +290,7 @@ fn writeAndWalkPlain(
                     array.appendAny(spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), basename, endl_s });
                 }
             },
-            .regular, .character_special, .block_special, .named_pipe, .socket => {
+            .regular, .character_special, .block_special, .named_pipe, .socket, .unknown => {
                 results.files +%= 1;
                 const style_0_s: [:0]const u8 = directory_style;
                 const style_1_s: [:0]const u8 = colour(entry.kind());
@@ -348,7 +349,7 @@ fn writeAndWalk(
                     array.appendAny(spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, style_s, basename, endl_s });
                 }
             },
-            .regular, .character_special, .block_special, .named_pipe, .socket => {
+            .regular, .character_special, .block_special, .named_pipe, .socket, .unknown => {
                 results.files +%= 1;
                 const arrow_s: [:0]const u8 = if (last) last_file_arrow_s else file_arrow_s;
                 array.appendAny(spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, style_s, basename, endl_s });
