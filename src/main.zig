@@ -1,5 +1,5 @@
-const srg = @import("zig_lib");
-const lit = srg.lit;
+const srg = @import("../zig_lib/zig_lib.zig");
+const tab = srg.tab;
 const sys = srg.sys;
 const fmt = srg.fmt;
 const mem = srg.mem;
@@ -78,7 +78,7 @@ const Options = packed struct {
     }
 };
 // zig fmt: off
-const opts_map: []const Options.Map = meta.slice(proc.GenericOptions(Options), .{
+const opt_map: []const Options.Map = &[_]proc.GenericOptions(Options){
     .{ .field_name = "max_depth",   .short = "-d",  .long = "--max-depth",  .assign = Options.int,  .descr = about_max_depth_s },
     if (Options.colour_default)
     .{ .field_name = "colour",      .short = "-C",  .long = "--no-color",   .assign = Options.no,   .descr = about_no_colour_s }
@@ -97,7 +97,7 @@ const opts_map: []const Options.Map = meta.slice(proc.GenericOptions(Options), .
     else
     .{ .field_name = "results",                     .long = "--results",    .assign = Options.yes,  .descr = about_results_s },
 
-}); // zig fmt: on
+}; // zig fmt: on
 const map_spec: thread.MapSpec = .{
     .errors = .{},
     .options = .{},
@@ -159,15 +159,15 @@ const last_dir_arrow_s: [:0]const u8 = if (use_wide_arrows) last_dir_arrow_ws el
 const empty_dir_arrow_s: [:0]const u8 = if (use_wide_arrows) empty_dir_arrow_ws else empty_dir_arrow_bs;
 const last_empty_dir_arrow_s: [:0]const u8 = if (use_wide_arrows) last_empty_dir_arrow_ws else last_empty_dir_arrow_bs;
 const no_colour: [:0]const u8 = "";
-var directory_style: [:0]const u8 = if (Options.colour_default) lit.fx.style.bold else no_colour;
-var symbolic_link_style: [:0]const u8 = if (Options.colour_default) lit.fx.color.fg.hi_cyan else no_colour;
-var regular_style: [:0]const u8 = if (Options.colour_default) lit.fx.color.fg.yellow else no_colour;
-var block_special_style: [:0]const u8 = if (Options.colour_default) lit.fx.color.fg.orange else no_colour;
-var character_special_style: [:0]const u8 = if (Options.colour_default) lit.fx.color.fg.hi_yellow else no_colour;
-var named_pipe_style: [:0]const u8 = if (Options.colour_default) lit.fx.color.fg.magenta else no_colour;
-var socket_style: [:0]const u8 = if (Options.colour_default) lit.fx.color.fg.hi_magenta else no_colour;
+var directory_style: [:0]const u8 = if (Options.colour_default) tab.fx.style.bold else no_colour;
+var symbolic_link_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.hi_cyan else no_colour;
+var regular_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.yellow else no_colour;
+var block_special_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.orange else no_colour;
+var character_special_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.hi_yellow else no_colour;
+var named_pipe_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.magenta else no_colour;
+var socket_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.hi_magenta else no_colour;
 comptime {
-    if (builtin.zig.mode == .Debug and print_in_second_thread) @compileError("unstable configuration");
+    if (builtin.mode == .Debug and print_in_second_thread) @compileError("unstable configuration");
 }
 fn colour(kind: file.Kind) [:0]const u8 {
     switch (kind) {
@@ -381,16 +381,16 @@ fn writeAndWalk(
 pub fn main(args: [][*:0]u8) !void {
     var args_in: [][*:0]u8 = args;
     var address_space: AddressSpace = .{};
-    const options: Options = proc.getOpts(Options, &args_in, opts_map);
+    const options: Options = Options.Map.getOpts(&args_in, opt_map);
     var names: Names = getNames(args_in);
     if (Options.colour_default != options.colour) {
-        directory_style = if (!Options.colour_default) lit.fx.style.bold else no_colour;
-        symbolic_link_style = if (!Options.colour_default) lit.fx.color.fg.hi_cyan else no_colour;
-        regular_style = if (!Options.colour_default) lit.fx.color.fg.yellow else no_colour;
-        block_special_style = if (!Options.colour_default) lit.fx.color.fg.orange else no_colour;
-        character_special_style = if (!Options.colour_default) lit.fx.color.fg.hi_yellow else no_colour;
-        named_pipe_style = if (!Options.colour_default) lit.fx.color.fg.magenta else no_colour;
-        socket_style = if (!Options.colour_default) lit.fx.color.fg.hi_magenta else no_colour;
+        directory_style = if (!Options.colour_default) tab.fx.style.bold else no_colour;
+        symbolic_link_style = if (!Options.colour_default) tab.fx.color.fg.hi_cyan else no_colour;
+        regular_style = if (!Options.colour_default) tab.fx.color.fg.yellow else no_colour;
+        block_special_style = if (!Options.colour_default) tab.fx.color.fg.orange else no_colour;
+        character_special_style = if (!Options.colour_default) tab.fx.color.fg.hi_yellow else no_colour;
+        named_pipe_style = if (!Options.colour_default) tab.fx.color.fg.magenta else no_colour;
+        socket_style = if (!Options.colour_default) tab.fx.color.fg.hi_magenta else no_colour;
     }
     if (names.len() == 0) {
         names.writeOne(".");
@@ -416,7 +416,7 @@ pub fn main(args: [][*:0]u8) !void {
                 var tid: u64 = undefined;
                 var done: bool = false;
                 var stack_buf: [16384]u8 align(16) = undefined;
-                const stack_addr: u64 = @ptrToInt(&stack_buf);
+                const stack_addr: u64 = @intFromPtr(&stack_buf);
                 tid = proc.callClone(thread_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
                 @call(.auto, if (plain_print) writeAndWalkPlain else writeAndWalk, .{
                     &options,  &allocator_0, &allocator_1, &array,
@@ -445,7 +445,7 @@ pub fn main(args: [][*:0]u8) !void {
                 var tid: u64 = undefined;
                 var done: bool = false;
                 var stack_buf: [16384]u8 align(16) = undefined;
-                const stack_addr: u64 = @ptrToInt(&stack_buf);
+                const stack_addr: u64 = @intFromPtr(&stack_buf);
                 tid = proc.callClone(thread_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
                 @call(.auto, if (plain_print) writeAndWalkPlain else writeAndWalk, .{
                     &options,  &allocator_0, &allocator_1, &array,
