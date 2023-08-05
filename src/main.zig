@@ -1,17 +1,18 @@
-const srg = @import("../zig_lib/zig_lib.zig");
-const tab = srg.tab;
-const sys = srg.sys;
-const fmt = srg.fmt;
-const mem = srg.mem;
-const mach = srg.mach;
-const file = srg.file;
-const meta = srg.meta;
-const proc = srg.proc;
-const spec = srg.spec;
-const thread = srg.thread;
-const builtin = srg.builtin;
-pub usingnamespace proc.start;
-pub const logging_override: builtin.Logging.Override = spec.logging.override.silent;
+const zl = @import("../zig_lib/zig_lib.zig");
+const tab = zl.tab;
+const sys = zl.sys;
+const fmt = zl.fmt;
+const mem = zl.mem;
+const mach = zl.mach;
+const file = zl.file;
+const meta = zl.meta;
+const proc = zl.proc;
+const spec = zl.spec;
+const debug = zl.debug;
+const thread = zl.thread;
+const builtin = zl.builtin;
+pub usingnamespace zl.start;
+pub const logging_override: debug.Logging.Override = spec.logging.override.silent;
 pub const AddressSpace = mem.GenericRegularAddressSpace(.{
     .lb_addr = 0,
     .lb_offset = 0x40000000,
@@ -417,7 +418,7 @@ pub fn main(args: [][*:0]u8) !void {
                 var done: bool = false;
                 var stack_buf: [16384]u8 align(16) = undefined;
                 const stack_addr: u64 = @intFromPtr(&stack_buf);
-                tid = proc.callClone(thread_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
+                tid = proc.clone(thread_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
                 @call(.auto, if (plain_print) writeAndWalkPlain else writeAndWalk, .{
                     &options,  &allocator_0, &allocator_1, &array,
                     &alts_buf, &link_buf,    &results,     null,
@@ -446,7 +447,7 @@ pub fn main(args: [][*:0]u8) !void {
                 var done: bool = false;
                 var stack_buf: [16384]u8 align(16) = undefined;
                 const stack_addr: u64 = @intFromPtr(&stack_buf);
-                tid = proc.callClone(thread_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
+                tid = proc.clone(thread_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
                 @call(.auto, if (plain_print) writeAndWalkPlain else writeAndWalk, .{
                     &options,  &allocator_0, &allocator_1, &array,
                     &alts_buf, &link_buf,    &results,     null,
