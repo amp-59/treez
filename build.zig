@@ -1,6 +1,7 @@
 pub const zl = @import("./zig_lib/zig_lib.zig");
 
-pub const Node = zl.build.GenericNode(.{});
+pub const Builder = zl.build.GenericBuilder(.{});
+const Node = Builder.Node;
 
 const build_cmd: zl.build.BuildCommand = .{
     .kind = .exe,
