@@ -3,46 +3,43 @@ const tab = zl.tab;
 const sys = zl.sys;
 const fmt = zl.fmt;
 const mem = zl.mem;
-const mach = zl.mach;
 const file = zl.file;
 const meta = zl.meta;
 const proc = zl.proc;
-const spec = zl.spec;
 const debug = zl.debug;
-const thread = zl.thread;
 const builtin = zl.builtin;
 pub usingnamespace zl.start;
-pub const logging_override: debug.Logging.Override = spec.logging.override.silent;
+pub const logging_override: debug.Logging.Override = debug.spec.logging.override.silent;
 pub const AddressSpace = mem.GenericRegularAddressSpace(.{
     .lb_addr = 0,
     .lb_offset = 0x40000000,
     .divisions = 32,
     .errors = .{ .acquire = .ignore, .release = .ignore },
 });
-const Allocator0 = mem.GenericArenaAllocator(.{
+const Allocator0 = mem.dynamic.GenericArenaAllocator(.{
     .AddressSpace = AddressSpace,
     .arena_index = 0,
-    .options = spec.allocator.options.small,
-    .logging = spec.allocator.logging.silent,
-    .errors = spec.allocator.errors.noexcept,
+    .options = mem.dynamic.spec.options.small,
+    .logging = mem.dynamic.spec.logging.silent,
+    .errors = mem.dynamic.spec.errors.noexcept,
 });
-const Allocator1 = mem.GenericArenaAllocator(.{
+const Allocator1 = mem.dynamic.GenericArenaAllocator(.{
     .AddressSpace = AddressSpace,
     .arena_index = 1,
-    .options = spec.allocator.options.small,
-    .logging = spec.allocator.logging.silent,
-    .errors = spec.allocator.errors.noexcept,
+    .options = mem.dynamic.spec.options.small,
+    .logging = mem.dynamic.spec.logging.silent,
+    .errors = mem.dynamic.spec.errors.noexcept,
 });
-const Array = mem.StaticString(4096);
+const Array = mem.array.StaticString(4096);
 const Array1 = Allocator1.StructuredHolder(u8);
 const Array0 = Allocator0.StructuredHolder(u8);
 const DirStream = file.GenericDirStream(.{
     .Allocator = Allocator0,
     .options = .{},
-    .logging = spec.dir.logging.silent,
+    .logging = file.spec.dir.logging.silent,
 });
 const Filter = meta.EnumBitField(file.Kind);
-const Names = mem.StaticArray([:0]const u8, max_pathname_args);
+const Names = mem.array.StaticArray([:0]const u8, max_pathname_args);
 const Results = struct {
     files: u64 = 0,
     dirs: u64 = 0,
@@ -53,6 +50,20 @@ const Results = struct {
         return results.dirs +% results.files +% results.links;
     }
 };
+noinline fn monitor(comptime T: type, ptr: *T) void {
+    const in: T = ptr.*;
+    asm volatile (
+        \\pause
+        \\0:
+        \\mov %[done], %al
+        \\cmpb %al, %[in]
+        \\je 0b
+        :
+        : [done] "p" (ptr),
+          [in] "r" (in),
+        : "al", "memory"
+    );
+}
 // Config:
 const plain_print: bool = false;
 const print_in_second_thread: bool = true;
@@ -75,7 +86,9 @@ const Options = packed struct {
     const int = .{ .convert = convertToInt };
     pub const Map = proc.GenericOptions(Options);
     fn convertToInt(options: *Options, arg: []const u8) void {
-        options.max_depth = builtin.parse.ud(u8, arg);
+        options.max_depth = zl.parse.any(u8, arg) catch |err| {
+            zl.proc.exitErrorFault(err, "invalid input integer for max depth", 2);
+        };
     }
 };
 // zig fmt: off
@@ -99,13 +112,9 @@ const opt_map: []const Options.Map = &[_]proc.GenericOptions(Options){
     .{ .field_name = "results",                     .long = "--results",    .assign = Options.yes,  .descr = about_results_s },
 
 }; // zig fmt: on
-const map_spec: thread.MapSpec = .{
+const clone_spec: proc.CloneSpec = .{
     .errors = .{},
-    .options = .{},
-};
-const thread_spec: proc.CloneSpec = .{
-    .errors = .{},
-    .options = .{},
+    .function_type = @TypeOf(&printAlong),
     .return_type = u64,
 };
 const about_max_depth_s: [:0]const u8 = "limit the maximum depth of recursion";
@@ -160,13 +169,13 @@ const last_dir_arrow_s: [:0]const u8 = if (use_wide_arrows) last_dir_arrow_ws el
 const empty_dir_arrow_s: [:0]const u8 = if (use_wide_arrows) empty_dir_arrow_ws else empty_dir_arrow_bs;
 const last_empty_dir_arrow_s: [:0]const u8 = if (use_wide_arrows) last_empty_dir_arrow_ws else last_empty_dir_arrow_bs;
 const no_colour: [:0]const u8 = "";
-var directory_style: [:0]const u8 = if (Options.colour_default) tab.fx.style.bold else no_colour;
-var symbolic_link_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.hi_cyan else no_colour;
-var regular_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.yellow else no_colour;
-var block_special_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.orange else no_colour;
-var character_special_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.hi_yellow else no_colour;
-var named_pipe_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.magenta else no_colour;
-var socket_style: [:0]const u8 = if (Options.colour_default) tab.fx.color.fg.hi_magenta else no_colour;
+var directory_style: [:0]const u8 = &if (Options.colour_default) tab.fx.style.bold else no_colour;
+var symbolic_link_style: [:0]const u8 = &if (Options.colour_default) tab.fx.color.fg.hi_cyan else no_colour;
+var regular_style: [:0]const u8 = &if (Options.colour_default) tab.fx.color.fg.yellow else no_colour;
+var block_special_style: [:0]const u8 = &if (Options.colour_default) tab.fx.color.fg.orange else no_colour;
+var character_special_style: [:0]const u8 = &if (Options.colour_default) tab.fx.color.fg.hi_yellow else no_colour;
+var named_pipe_style: [:0]const u8 = &if (Options.colour_default) tab.fx.color.fg.magenta else no_colour;
+var socket_style: [:0]const u8 = &if (Options.colour_default) tab.fx.color.fg.hi_magenta else no_colour;
 comptime {
     if (builtin.mode == .Debug and print_in_second_thread) @compileError("unstable configuration");
 }
@@ -250,9 +259,9 @@ fn writeReadLink(
     const buf: []u8 = link_buf.referManyUndefined(4096);
     const link_pathname: [:0]const u8 = file.readLinkAt(.{}, dir_fd, base_name, buf) catch {
         results.errors +%= 1;
-        return array.appendAny(spec.reinterpret.ptr, allocator_1, .{ what_s, endl_s });
+        return array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ what_s, endl_s });
     };
-    array.appendAny(spec.reinterpret.ptr, allocator_1, .{ link_pathname, endl_s });
+    array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ link_pathname, endl_s });
 }
 fn writeAndWalkPlain(
     options: *const Options,
@@ -285,22 +294,22 @@ fn writeAndWalkPlain(
                 const style_0_s: [:0]const u8 = directory_style;
                 const style_1_s: [:0]const u8 = symbolic_link_style;
                 if (options.follow) {
-                    array.appendAny(spec.reinterpret.ptr, allocator_1, .{ style_0_s, alts_buf.readAll(), style_1_s, basename, links_to_s });
+                    array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ style_0_s, alts_buf.readAll(), style_1_s, basename, links_to_s });
                     try writeReadLink(allocator_1, array, link_buf, results, dir.fd, basename);
                 } else {
-                    array.appendAny(spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), basename, endl_s });
+                    array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), basename, endl_s });
                 }
             },
             .regular, .character_special, .block_special, .named_pipe, .socket, .unknown => {
                 results.files +%= 1;
                 const style_0_s: [:0]const u8 = directory_style;
                 const style_1_s: [:0]const u8 = colour(entry.kind());
-                array.appendAny(spec.reinterpret.ptr, allocator_1, .{ style_0_s, alts_buf.readAll(), style_1_s, basename, endl_s });
+                array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ style_0_s, alts_buf.readAll(), style_1_s, basename, endl_s });
             },
             .directory => {
                 results.dirs +%= 1;
                 const style_s: [:0]const u8 = directory_style;
-                array.appendAny(spec.reinterpret.ptr, allocator_1, .{ style_s, alts_buf.readAll(), basename, endl_s });
+                array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ style_s, alts_buf.readAll(), basename, endl_s });
                 if (depth != options.max_depth) {
                     results.depth = builtin.max(u64, results.depth, depth +% 1);
                     writeAndWalkPlain(options, allocator_0, allocator_1, array, alts_buf, link_buf, results, dir.fd, basename, depth +% 1) catch {
@@ -343,23 +352,23 @@ fn writeAndWalk(
                 results.links +%= 1;
                 if (options.follow) {
                     const arrow_s: [:0]const u8 = if (last) last_link_arrow_s else link_arrow_s;
-                    array.appendAny(spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, style_s, basename, links_to_s });
+                    array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, style_s, basename, links_to_s });
                     try writeReadLink(allocator_1, array, link_buf, results, dir.fd, basename);
                 } else {
                     const arrow_s: [:0]const u8 = if (last) last_link_arrow_s else link_arrow_s;
-                    array.appendAny(spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, style_s, basename, endl_s });
+                    array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, style_s, basename, endl_s });
                 }
             },
             .regular, .character_special, .block_special, .named_pipe, .socket, .unknown => {
                 results.files +%= 1;
                 const arrow_s: [:0]const u8 = if (last) last_file_arrow_s else file_arrow_s;
-                array.appendAny(spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, style_s, basename, endl_s });
+                array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, style_s, basename, endl_s });
             },
             .directory => {
                 results.dirs +%= 1;
                 var arrow_s: [:0]const u8 = if (last) last_dir_arrow_s else dir_arrow_s;
                 const len_0: u64 = array.len(allocator_1.*);
-                try meta.wrap(array.appendAny(spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, basename, endl_s }));
+                try meta.wrap(array.appendAny(mem.array.spec.reinterpret.ptr, allocator_1, .{ alts_buf.readAll(), arrow_s, basename, endl_s }));
                 if (depth != options.max_depth) {
                     results.depth = builtin.max(u64, results.depth, depth +% 1);
                     const en_total: u64 = results.total();
@@ -371,7 +380,7 @@ fn writeAndWalk(
                         arrow_s = if (index == list.count -% 1) last_empty_dir_arrow_s else empty_dir_arrow_s;
                         if (en_total == ex_total) {
                             array.undefine(array.len(allocator_1.*) -% len_0);
-                            array.writeAny(spec.reinterpret.ptr, .{ alts_buf.readAll(), arrow_s, basename, endl_s });
+                            array.writeAny(mem.array.spec.reinterpret.ptr, .{ alts_buf.readAll(), arrow_s, basename, endl_s });
                         }
                     }
                 }
@@ -385,13 +394,13 @@ pub fn main(args: [][*:0]u8) !void {
     const options: Options = Options.Map.getOpts(&args_in, opt_map);
     var names: Names = getNames(args_in);
     if (Options.colour_default != options.colour) {
-        directory_style = if (!Options.colour_default) tab.fx.style.bold else no_colour;
-        symbolic_link_style = if (!Options.colour_default) tab.fx.color.fg.hi_cyan else no_colour;
-        regular_style = if (!Options.colour_default) tab.fx.color.fg.yellow else no_colour;
-        block_special_style = if (!Options.colour_default) tab.fx.color.fg.orange else no_colour;
-        character_special_style = if (!Options.colour_default) tab.fx.color.fg.hi_yellow else no_colour;
-        named_pipe_style = if (!Options.colour_default) tab.fx.color.fg.magenta else no_colour;
-        socket_style = if (!Options.colour_default) tab.fx.color.fg.hi_magenta else no_colour;
+        directory_style = if (!Options.colour_default) &tab.fx.style.bold else no_colour;
+        symbolic_link_style = if (!Options.colour_default) &tab.fx.color.fg.hi_cyan else no_colour;
+        regular_style = if (!Options.colour_default) &tab.fx.color.fg.yellow else no_colour;
+        block_special_style = if (!Options.colour_default) &tab.fx.color.fg.orange else no_colour;
+        character_special_style = if (!Options.colour_default) &tab.fx.color.fg.hi_yellow else no_colour;
+        named_pipe_style = if (!Options.colour_default) &tab.fx.color.fg.magenta else no_colour;
+        socket_style = if (!Options.colour_default) &tab.fx.color.fg.hi_magenta else no_colour;
     }
     if (names.len() == 0) {
         names.writeOne(".");
@@ -414,11 +423,11 @@ pub fn main(args: [][*:0]u8) !void {
         try meta.wrap(array.appendMany(&allocator_1, if (arg[arg.len -% 1] != '/') "/\n" else "\n"));
         if (plain_print) {
             if (print_in_second_thread) {
-                var tid: u64 = undefined;
+                var tid: usize = undefined;
                 var done: bool = false;
                 var stack_buf: [16384]u8 align(16) = undefined;
-                const stack_addr: u64 = @intFromPtr(&stack_buf);
-                tid = proc.clone(thread_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
+                const stack_addr: usize = @intFromPtr(&stack_buf);
+                tid = proc.clone(clone_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
                 @call(.auto, if (plain_print) writeAndWalkPlain else writeAndWalk, .{
                     &options,  &allocator_0, &allocator_1, &array,
                     &alts_buf, &link_buf,    &results,     null,
@@ -427,8 +436,7 @@ pub fn main(args: [][*:0]u8) !void {
                     results.errors +%= 1;
                 };
                 done = true;
-                mem.monitor(bool, &done);
-                thread.unmap(.{ .errors = .{} }, 8);
+                monitor(bool, &done);
             } else {
                 @call(.auto, if (plain_print) writeAndWalkPlain else writeAndWalk, .{
                     &options,  &allocator_0, &allocator_1, &array,
@@ -441,13 +449,14 @@ pub fn main(args: [][*:0]u8) !void {
                 show(results);
             }
         } else {
-            mach.memset(alts_buf.referManyAt(0).ptr, ' ', 4096);
+            @memset(alts_buf.referManyAt(0), ' ');
             if (print_in_second_thread) {
-                var tid: u64 = undefined;
+                var ret: meta.Return(printAlong) = {};
+                var tid: usize = undefined;
                 var done: bool = false;
                 var stack_buf: [16384]u8 align(16) = undefined;
                 const stack_addr: u64 = @intFromPtr(&stack_buf);
-                tid = proc.clone(thread_spec, stack_addr, stack_buf.len, {}, printAlong, .{ &results, &done, &allocator_1, &array });
+                tid = proc.clone(clone_spec, .{}, stack_addr, stack_buf.len, &ret, printAlong, .{ &results, &done, &allocator_1, &array });
                 @call(.auto, if (plain_print) writeAndWalkPlain else writeAndWalk, .{
                     &options,  &allocator_0, &allocator_1, &array,
                     &alts_buf, &link_buf,    &results,     null,
@@ -456,8 +465,7 @@ pub fn main(args: [][*:0]u8) !void {
                     results.errors +%= 1;
                 };
                 done = true;
-                mem.monitor(bool, &done);
-                thread.unmap(.{ .errors = .{} }, 8);
+                monitor(bool, &done);
             } else {
                 @call(.auto, if (plain_print) writeAndWalkPlain else writeAndWalk, .{
                     &options,  &allocator_0, &allocator_1, &array,
